@@ -1,39 +1,95 @@
-<!-- RegistrationForm.razor -->
-<EditForm Model="@registrationModel" OnValidSubmit="@HandleRegistration">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+@page "/register/{EventId:int}"
+@using EventEase.Models
+@using EventEase.Services;
+@inject NavigationManager NavigationManager
+@inject SessionState SessionState
+    @if (Event == null)
+    {
+        <p class="text-center">Loading event details...</p>
+    }
+    else
+    {
+        <h3>Register for @Event.Name</h3>
+        <p>@Event.Description</p>
+        <p>Date: @Event.Date.ToString("MMMM dd, yyyy")</p>
+        <p>Location: @Event.Location</p>
 
-    <div class="form-group">
-        <label>Email:</label>
-        <InputText @bind-Value="registrationModel.Email" />
-        <ValidationMessage For="@(() => registrationModel.Email)" />
-    </div>
+        <EditForm Model="@NewAttendee" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
 
-    <div class="form-group">
-        <label>Password:</label>
-        <InputText type="password" @bind-Value="registrationModel.Password" />
-        <ValidationMessage For="@(() => registrationModel.Password)" />
-    </div>
+            <div class="mb-3">
+                <label for="name" class="form-label">Name</label>
+                <InputText id="name" class="form-control" @bind-Value="NewAttendee.Name" required />
+                <ValidationMessage For="@(() => NewAttendee.Name)" />
+            </div>
 
-    <button type="submit" class="btn btn-primary">Register</button>
-</EditForm>
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <InputText id="email" type="email" class="form-control" @bind-Value="NewAttendee.Email" required />
+                <ValidationMessage For="@(() => NewAttendee.Email)" />
+            </div>
 
+            <button type="submit" class="btn btn-primary">Register</button>
+        </EditForm>
+
+        @if (IsRegistered)
+        {
+            <p class="text-success mt-3 text-center">Thank you for registering, @NewAttendee.Name!</p>
+        }
+
+        <p class="text-center mt-3">
+            <a href="/events" class="btn btn-secondary">Back to Events</a>
+        </p>
+        <AttendanceTracker Event="Event" />
+    
 @code {
-    private RegistrationModel registrationModel = new();
-
-    private void HandleRegistration()
+    [Parameter]
+    public int EventId { get; set; }    
+    private Event? Event { get; set; }
+    private Attendee NewAttendee { get; set; } = new Attendee
     {
-        // Registration logic
+        Name = string.Empty,
+        Email = string.Empty,
+        EventId = 0,
+        Event = default!
+    };
+    private bool IsRegistered { get; set; } = false;
+
+    protected override void OnInitialized()
+    {
+        // Retrieve the selected event from session state
+        Event = SessionState.SelectedEvent;
+
+        if (Event != null)
+        {
+            NewAttendee.EventId = Event.Id;
+        }
     }
 
-    public class RegistrationModel
+    private void HandleValidSubmit()
     {
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; }
+        // Create a new Attendee object to avoid modifying the existing one
+        var attendeeToRegister = new Attendee
+        {
+            Name = NewAttendee.Name,
+            Email = NewAttendee.Email,
+            EventId = NewAttendee.EventId,
+            Event = NewAttendee.Event
+        };
 
-        [Required]
-        [StringLength(100, MinimumLength = 6)]
-        public string Password { get; set; }
+        // Add the new attendee to the session state
+        SessionState.RegisterAttendee(attendeeToRegister);
+
+        // Reset the form and show success message
+        IsRegistered = true;
+        NewAttendee = new Attendee
+        {
+            Name = string.Empty,
+            Email = string.Empty,
+            EventId = Event?.Id ?? 0,
+            Event = Event
+        };
     }
+}
 }

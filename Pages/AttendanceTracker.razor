@@ -1,43 +1,39 @@
-<!-- AttendanceTracker.razor -->
-@if (attendees.Any())
+@using EventEase.Models
+@using EventEase.Services
+@inject SessionState SessionState
+
+@if (Event != null)
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Check-in Time</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var attendee in attendees)
-            {
-                <tr>
-                    <td>@attendee.Name</td>
-                    <td>@attendee.Email</td>
-                    <td>@attendee.CheckInTime.ToString("g")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="container my-4">
+        <h4 class="text-center">Attendees for @Event.Name</h4>
+
+        @if (Attendees.Any())
+        {
+            <ul class="list-group">
+                @foreach (var attendee in Attendees)
+                {
+                    <li class="list-group-item">
+                        <strong>@attendee.Name</strong> - @attendee.Email 
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-center text-muted">No attendees have registered for this event yet.</p>
+        }
+    </div>
 }
 else
 {
-    <p>No attendees yet.</p>
+    <p class="text-danger text-center">Event details are not available.</p>
 }
 
 @code {
-    private List<Attendee> attendees = new();
+    [Parameter]
+    public Event? Event { get; set; }
 
-    protected override void OnInitialized()
-    {
-        // Load attendees from API or service
-    }
-
-    public class Attendee
-    {
-        public string Name { get; set; }
-        public string Email { get; set; }
-        public DateTime CheckInTime { get; set; }
-    }
+    private List<Attendee> Attendees => SessionState.RegisteredAttendees
+        .Where(a => a.EventId == Event?.Id)
+        .ToList();
 }
